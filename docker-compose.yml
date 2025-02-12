@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: iot_frontend
     ports:
-      - "80:80"
+      - "5173:5173"
     environment:
       - VITE_MQTT_BROKER=ws://broker.hivemq.com:8000/mqtt
     networks:
@@ -24,9 +24,44 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - MQTT_BROKER=mqtt://broker.hivemq.com:1883
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=sosamejia
+      - MYSQL_DATABASE=iot_db
+      - MQTT_BROKER=mqtt://santiago:sosamejia@192.168.1.5:1883
     networks:
       - iot_network
+
+  mysql:
+    image: mysql:latest
+    container_name: iot_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=sosamejia
+      - MYSQL_DATABASE=iot_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - iot_network
+
+  emqx:
+    image: emqx/emqx:latest
+    container_name: iot_emqx
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "8083:8083"
+      - "8084:8084"
+      - "18083:18083"
+    environment:
+      - EMQX_NAME=emqx
+      - EMQX_HOST=0.0.0.0
+    networks:
+      - iot_network
+
+volumes:
+  mysql_data:
 
 networks:
   iot_network:

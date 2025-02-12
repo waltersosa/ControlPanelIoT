@@ -6,6 +6,8 @@ WORKDIR /app
 # Copiar archivos de configuración
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY tsconfig.app.json ./
+COPY tsconfig.node.json ./
 COPY vite.config.ts ./
 
 # Instalar dependencias
@@ -20,15 +22,15 @@ COPY index.html ./
 RUN npm run build
 
 # Etapa de producción
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Copiar la configuración de nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copiar los archivos construidos
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copiar archivos construidos
+COPY --from=build /app/dist /app
 
 # Exponer puerto
-EXPOSE 80
+EXPOSE 5173
 
-CMD ["nginx", "-g", "daemon off;"]
+# Comando para iniciar el servidor
+CMD ["npx", "vite", "preview", "--host", "0.0.0.0"]

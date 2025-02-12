@@ -5,7 +5,6 @@ import cors from 'cors';
 import { MQTTClient } from './mqttClient.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,8 +19,11 @@ const server = createServer(app);
 // WebSocket server
 const wss = new WebSocketServer({ server });
 
+// Obtener la URL del broker MQTT desde las variables de entorno
+const mqttBrokerUrl = process.env.MQTT_BROKER || 'mqtt://localhost:1883'; // Valor por defecto
+
 // Cliente MQTT para el servidor
-const serverMqtt = new MQTTClient('webserver');
+const serverMqtt = new MQTTClient('webserver', mqttBrokerUrl); // Asegúrate de que tu cliente MQTT acepte la URL
 serverMqtt.connect();
 
 // Almacenar estado de dispositivos
