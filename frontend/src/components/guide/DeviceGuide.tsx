@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Cpu, Zap, Thermometer, RotateCcw, Download, Wifi, Cable } from 'lucide-react';
+import { saveAs } from 'file-saver';
 
 export const DeviceGuide: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'esp32' | 'esp8266'>('esp32');
 
-  const handleDownload = (device: string, sensor: string) => {
-    const path = `/codigos/${device}/${sensor}.ino`;
-    // Implementar la descarga del archivo
-    console.log(`Descargando: ${path}`);
+  const handleDownload = async (platform: string, sensor: string) => {
+    try {
+      const response = await fetch(`/codigos/${platform}/${sensor}.ino`);
+      const code = await response.text();
+      const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+      saveAs(blob, `${platform}_${sensor}.ino`);
+    } catch (error) {
+      console.error('Error al descargar el código:', error);
+    }
   };
 
   return (

@@ -1,97 +1,56 @@
-import { MQTTClient } from './mqttClient.js';
+import mqtt from 'mqtt';
 
-class SimulatedDevice {
-  constructor(deviceId, type) {
-    this.deviceId = deviceId;
-    this.type = type;
-    this.client = new MQTTClient(deviceId);
-    this.interval = null;
-    this.relayState = false;
+const client = mqtt.connect('ws://broker.hivemq.com:8000/mqtt');
 
-    // Configurar cliente MQTT
-    this.client.on('connect', () => {
-      console.log(`Dispositivo ${deviceId} conectado`);
-      this.startSimulation();
-    });
+// Configuración del dispositivo simulado
+const deviceConfig = {
+  id: 'dht_sim_001',
+  name: 'DHT Simulado',
+  type: 'dht',
+  category: 'Sensor'
+};
 
-    this.client.on('message', (topic, message) => {
-      if (topic === `iot/device/${deviceId}/command`) {
-        this.handleCommand(JSON.parse(message.toString()));
-      }
-    });
-  }
-
-  connect() {
-    this.client.connect();
-    this.client.subscribe(`iot/device/${this.deviceId}/command`);
-  }
-
-  handleCommand(message) {
-    switch (this.type) {
-      case 'relay':
-        if (message.command === 'setState') {
-          this.relayState = message.value;
-          this.publishState({ state: this.relayState });
-        }
-        break;
-
-      case 'servo':
-        if (message.command === 'setAngle') {
-          this.publishState({ angle: message.value });
-        }
-        break;
-    }
-  }
-
-  publishState(data) {
-    const state = {
-      deviceId: this.deviceId,
-      type: this.type,
-      timestamp: new Date().toISOString(),
-      data: {
-        ...data,
-        cpuFreq: parseFloat((160 + Math.random() * 80).toFixed(1)), // CPU frecuencia con 1 decimal
-        wifiStrength: parseFloat((-30 - Math.random() * 40).toFixed(1)), // WiFi con 1 decimal
-        uptime: Math.floor(process.uptime()) // Tiempo de actividad
-      }
-    };
-
-    this.client.publish(`iot/device/${this.deviceId}/state`, JSON.stringify(state));
-  }
-
-  startSimulation() {
-    switch (this.type) {
-      case 'dht':
-        this.interval = setInterval(() => {
-          this.publishState({
-            temperature: parseFloat((20 + Math.random() * 10).toFixed(1)), // Temperatura con 1 decimal
-            humidity: parseFloat((40 + Math.random() * 20).toFixed(1)) // Humedad con 1 decimal
-          });
-        }, 2000);
-        break;
-
-      case 'relay':
-        this.interval = setInterval(() => {
-          this.relayState = !this.relayState;
-          this.publishState({ state: this.relayState });
-        }, 5000);
-        break;
-
-      case 'servo':
-        this.interval = setInterval(() => {
-          const angle = Math.floor(Math.random() * 180);
-          this.publishState({ angle });
-        }, 3000);
-        break;
-    }
-  }
-
-  stopSimulation() {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
-    }
-  }
+// Función para generar datos aleatorios del sensor
+function generateSensorData() {
+  return {
+    temperature: (20 + Math.random() * 10).toFixed(1), // Temperatura entre 20-30°C
+    humidity: (50 + Math.random() * 30).toFixed(1),    // Humedad entre 50-80%
+    cpuFreq: 240,
+    wifiStrength: -(35 + Math.random() * 20).toFixed(0), // RSSI entre -35 y -55 dBm
+    uptime: Math.floor(Date.now() / 1000),
+    ipAddress: '192.168.1.150'
+  };
 }
 
-export default SimulatedDevice;
+// Función para publicar datos
+function publishData() {
+  const message = {
+    name: deviceConfig.name,
+    type: deviceConfig.type,
+    category: deviceConfig.category,
+    data: generateSensorData()
+  };
+
+  const topic = `iot/device/${deviceConfig.id}/state`;
+  client.publish(topic, JSON.stringify(message), { qos: 1 });
+  console.log('Datos publicados:', message);
+}
+
+// Manejo de la conexión MQTT
+client.on('connect', () => {
+  console.log('Conectado al broker MQTT');
+  
+  // Publicar datos cada 2 segundos
+  setInterval(publishData, 2000);
+});
+
+client.on('error', (error) => {
+  console.error('Error de conexión:', error);
+});
+
+// Manejar el cierre limpio
+process.on('SIGINT', () => {
+  console.log('Cerrando conexión MQTT...');
+  client.end();
+  process.exit();
+}); 

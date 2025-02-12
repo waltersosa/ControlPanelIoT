@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navbar } from '../components/navigation/Navbar';
 import { Terminal } from '../components/terminal/Terminal';
+import { config } from '../config';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -33,13 +34,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
         <Navbar onToggleTerminal={toggleTerminal} />
         
-        {/* Server IP Container */}
+        {/* Server IP Container - Actualizado para mostrar el broker MQTT */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg p-4 mb-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-400">IP del Servidor:</span>
-                <span className="text-lg font-mono text-red-500">192.168.10.100</span>
+                <span className="text-sm text-gray-400">Broker MQTT:</span>
+                <span className="text-lg font-mono text-red-500">broker.hivemq.com:8000</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

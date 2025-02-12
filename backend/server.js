@@ -97,8 +97,8 @@ app.get('/health', (req, res) => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 80;
-const HOST = process.env.HOST || '192.168.0.100';
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 'localhost';
 
 server.listen(PORT, HOST, () => {
   console.log(`Servidor ejecutándose en http://${HOST}:${PORT}`);

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "mqtt": "^5.3.0"
+  },
+  "scripts": {
+    "simulate": "node backend/simulatedDevices.js"
+  }
+} 
