@@ -19,19 +19,29 @@ const MQTT_OPTIONS = {
   },
   rejectUnauthorized: false,
   clientId: `mqttjs_${Math.random().toString(16).substring(2, 10)}_${Date.now()}`,
-  username: '',
-  password: ''
-};
-
-const MQTT_TOPICS = {
-  deviceState: 'iot/device/+/state',
-  deviceCommand: 'iot/device/{id}/command'
+  username: 'santiago',
+  password: 'sosamejia'
 };
 
 export const useMQTT = () => {
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [topics, setTopics] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(false);
+
+  const subscribeToTopic = useCallback((mqttClient: mqtt.MqttClient, topic: string) => {
+    if (!topics.has(topic)) {
+      console.log(`Intentando suscribirse a: ${topic}`);
+      mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+        if (err) {
+          console.error(`Error al suscribirse a ${topic}:`, err);
+        } else {
+          console.log(`Suscrito exitosamente a ${topic}`);
+          setTopics(prev => new Set(prev).add(topic));
+        }
+      });
+    }
+  }, [topics]);
 
   useEffect(() => {
     let mqttClient: mqtt.MqttClient | null = null;
@@ -44,40 +54,42 @@ export const useMQTT = () => {
         console.log('Conectado al broker MQTT');
         setIsConnected(true);
         
-        // Suscribirse a todos los estados de dispositivos
+        mqttClient?.subscribe('iot/discovery', { qos: 1 }, (err) => {
+          if (err) {
+            console.error('Error al suscribirse a discovery:', err);
+          } else {
+            console.log('Suscrito a discovery');
+          }
+        });
+
         mqttClient?.subscribe('iot/device/+/state', { qos: 1 }, (err) => {
           if (err) {
-            console.error('Error al suscribirse:', err);
+            console.error('Error al suscribirse a los estados:', err);
           } else {
-            console.log('Suscrito exitosamente a iot/device/+/state');
+            console.log('Suscrito a los estados de dispositivos');
           }
         });
       });
 
-      mqttClient.on('error', (error) => {
-        console.error('MQTT Error:', error);
-        setIsConnected(false);
-      });
-
-      mqttClient.on('close', () => {
-        console.log('Conexión MQTT cerrada');
-        setIsConnected(false);
-      });
-
-      mqttClient.on('reconnect', () => {
-        console.log('Intentando reconexión MQTT...');
-      });
-
       mqttClient.on('message', (topic, message) => {
-        console.log('Mensaje MQTT recibido:', {
-          topic,
-          message: message.toString()
-        });
+        console.log(`Mensaje recibido en topic ${topic}:`, message.toString());
         
         try {
           const payload = JSON.parse(message.toString());
+
+          if (topic === 'iot/discovery') {
+            console.log('Discovery message received:', payload);
+            if (payload.stateTopic && mqttClient) {
+              subscribeToTopic(mqttClient, payload.stateTopic);
+              if (payload.commandTopic) {
+                subscribeToTopic(mqttClient, payload.commandTopic);
+              }
+            }
+            return;
+          }
+
           const deviceId = topic.split('/')[2];
-          console.log('Procesando dispositivo:', deviceId, payload);
+          console.log(`Actualizando dispositivo ${deviceId}:`, payload);
 
           setDevices(prevDevices => {
             const deviceIndex = prevDevices.findIndex(d => d.id === deviceId);
@@ -90,8 +102,6 @@ export const useMQTT = () => {
               data: payload.data
             };
 
-            console.log('Dispositivo actualizado:', updatedDevice);
-
             if (deviceIndex >= 0) {
               const newDevices = [...prevDevices];
               newDevices[deviceIndex] = updatedDevice;
@@ -101,8 +111,18 @@ export const useMQTT = () => {
             }
           });
         } catch (error) {
-          console.error('Error procesando mensaje MQTT:', error);
+          console.error('Error procesando mensaje MQTT:', error, 'Topic:', topic, 'Message:', message.toString());
         }
+      });
+
+      mqttClient.on('error', (error) => {
+        console.error('MQTT Error:', error);
+        setIsConnected(false);
+      });
+
+      mqttClient.on('close', () => {
+        console.log('Conexión MQTT cerrada');
+        setIsConnected(false);
       });
 
       setClient(mqttClient);
@@ -115,30 +135,30 @@ export const useMQTT = () => {
         mqttClient.end();
       }
     };
-  }, []);
+  }, [subscribeToTopic]);
 
-  // Enviar comandos a los dispositivos
-  const toggleRelay = useCallback((deviceId: string) => {
+  const toggleRelay = useCallback((deviceId: string, state: boolean) => {
     if (client && isConnected) {
-      const topic = MQTT_TOPICS.deviceCommand.replace('{id}', deviceId);
+      const topic = `iot/device/${deviceId}/command`;
       const message = JSON.stringify({
         command: 'setState',
-        value: true
+        value: state
       });
-      console.log('Enviando comando al relay:', topic, message);
-      client.publish(topic, message);
+      console.log(`Enviando comando al relay ${deviceId}:`, message);
+      client.publish(topic, message, { qos: 1 });
+    } else {
+      console.error('No se puede enviar comando: Cliente MQTT no conectado');
     }
   }, [client, isConnected]);
 
   const setServoAngle = useCallback((deviceId: string, angle: number) => {
-    if (client && isConnected) {
-      const topic = MQTT_TOPICS.deviceCommand.replace('{id}', deviceId);
+    if (client && isConnected && angle >= 0 && angle <= 180) {
+      const topic = `iot/device/${deviceId}/command`;
       const message = JSON.stringify({
         command: 'setAngle',
         value: angle
       });
-      console.log('Enviando comando al servo:', topic, message);
-      client.publish(topic, message);
+      client.publish(topic, message, { qos: 1 });
     }
   }, [client, isConnected]);
 

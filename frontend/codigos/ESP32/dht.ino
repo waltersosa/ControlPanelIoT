@@ -13,7 +13,10 @@ const int DHT_PIN = 12;
 DHT dht(DHT_PIN, DHT22);
 WiFiClient espClient;
 PubSubClient client(espClient);
-String deviceId = "dht_esp32_001";  // ID único para este dispositivo
+const char* deviceId = "dht_esp32_002";  // ID único para este dispositivo
+const char* stateTopic = "iot/device/dht_esp32_002/state";
+const char* commandTopic = "iot/device/dht_esp32_002/command";
+const char* discoveryTopic = "iot/discovery";  // Topic para anunciar dispositivos
 
 void setup() {
   Serial.begin(115200);
@@ -28,6 +31,25 @@ void setup() {
 
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
+
+  // Generar un ID de cliente único
+  String clientId = "ESP32_DHT_" + String(random(0xffff), HEX);
+
+  // Después de conectar al WiFi y MQTT
+  if (client.connect(clientId.c_str(), "santiago", "sosamejia")) {
+    Serial.println("Conectado al broker MQTT");
+    
+    // Publicar mensaje de discovery
+    StaticJsonDocument<200> discovery;
+    discovery["deviceId"] = deviceId;
+    discovery["type"] = "dht";
+    discovery["stateTopic"] = stateTopic;
+    discovery["commandTopic"] = commandTopic;
+
+    String discoveryMessage;
+    serializeJson(discovery, discoveryMessage);
+    client.publish(discoveryTopic, discoveryMessage.c_str(), true);  // retained message
+  }
 }
 
 void loop() {
@@ -52,8 +74,19 @@ void reconnect() {
     Serial.print("Conectando a MQTT...");
     String clientId = "ESP32_DHT_" + String(random(0xffff), HEX);
     
-    if (client.connect(clientId.c_str(), "santiago", "sosamejia")) {  // Agregar credenciales
+    if (client.connect(clientId.c_str(), "santiago", "sosamejia")) {
       Serial.println("conectado");
+      
+      // Volver a publicar el mensaje de discovery después de reconectar
+      StaticJsonDocument<200> discovery;
+      discovery["deviceId"] = deviceId;
+      discovery["type"] = "dht";
+      discovery["stateTopic"] = stateTopic;
+      discovery["commandTopic"] = commandTopic;
+
+      String discoveryMessage;
+      serializeJson(discovery, discoveryMessage);
+      client.publish(discoveryTopic, discoveryMessage.c_str(), true);
     } else {
       Serial.print("falló, rc=");
       Serial.print(client.state());
@@ -91,8 +124,7 @@ void sendSensorData() {
     Serial.print("Enviando mensaje MQTT: ");
     Serial.println(message);
     
-    // Publicar con QoS 1
-    String topic = "iot/device/" + deviceId + "/state";
-    client.publish(topic.c_str(), message.c_str(), true);
+    // Publicar con QoS 1 y retained = false para evitar duplicados
+    client.publish(stateTopic, message.c_str(), false);  // Cambiado retained a false
   }
 }

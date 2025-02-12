@@ -14,7 +14,7 @@ export const DeviceGrid: React.FC = () => {
         <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
         <h3 className="text-xl font-bold text-red-500 mb-2">Error de Conexión</h3>
         <p className="text-gray-400 text-center">
-          No se pudo conectar al broker MQTT. Por favor, verifica tu conexión a internet.
+          No se pudo conectar al broker MQTT. Por favor, verifica tu conexión.
         </p>
       </div>
     );
@@ -31,15 +31,21 @@ export const DeviceGrid: React.FC = () => {
     );
   }
 
+  // Filtrar dispositivos duplicados por ID
+  const uniqueDevices = Array.from(new Map(devices.map(device => [device.id, device])).values());
+
   const renderDevice = (device: any) => {
     switch (device.type) {
       case 'relay':
         return (
           <PowerSwitch
             key={device.id}
+            deviceId={device.id}
             isOn={device.data.relayState}
-            onChange={() => toggleRelay(device.id)}
+            onChange={(state) => toggleRelay(device.id, state)}
             label={device.name}
+            ipAddress={device.data.ipAddress || 'Unknown'}
+            isOnline={device.isOnline}
           />
         );
       case 'dht':
@@ -47,6 +53,7 @@ export const DeviceGrid: React.FC = () => {
           <ThermostatWidget
             key={device.id}
             deviceName={device.name}
+            deviceId={device.id}
             category={device.category}
             ipAddress={device.data.ipAddress || 'Unknown'}
             temperature={device.data.temperature}
@@ -73,7 +80,7 @@ export const DeviceGrid: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {devices.map(device => renderDevice(device))}
+      {uniqueDevices.map(device => renderDevice(device))}
     </div>
   );
 };

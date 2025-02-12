@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Thermometer, Droplets, Wifi } from 'lucide-react';
+import { Thermometer, Droplets, Wifi, Hash } from 'lucide-react';
 
 interface ThermostatWidgetProps {
   deviceName: string;
+  deviceId: string;
   category: string;
   ipAddress: string;
   temperature: number;
@@ -13,6 +14,7 @@ interface ThermostatWidgetProps {
 
 export const ThermostatWidget: React.FC<ThermostatWidgetProps> = ({
   deviceName,
+  deviceId,
   category,
   ipAddress,
   temperature,
@@ -31,6 +33,10 @@ export const ThermostatWidget: React.FC<ThermostatWidgetProps> = ({
         <div>
           <h3 className="text-lg font-semibold text-white">{deviceName}</h3>
           <span className="text-sm text-gray-400">{category}</span>
+          <div className="flex items-center mt-1 space-x-1">
+            <Hash className="w-3 h-3 text-blue-400" />
+            <span className="text-xs text-blue-400">{deviceId}</span>
+          </div>
         </div>
         <div className="flex flex-col items-end">
           <div className="flex items-center space-x-2">
