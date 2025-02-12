@@ -1,22 +1,23 @@
-// Código para Relé - ESP32
+// Código para Relay - ESP32
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-const char* ssid = "YourWiFiSSID";
-const char* password = "YourWiFiPassword";
-const char* mqtt_server = "broker.hivemq.com";
+const char* ssid = "HOLA";  // Cambia esto por el SSID de tu red WiFi
+const char* password = "12345678";  // Cambia esto por la contraseña de tu red WiFi
+const char* mqtt_server = "192.168.10.122";  // Cambiado a la IP del broker
 const int mqtt_port = 1883;
-const int RELAY_PIN = 5;
+const int relayPin = 13;  // Pin donde está conectado el relay
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-String deviceId = "relay_001";
+String deviceId = "relay_esp32_001";  // ID único para este dispositivo
 bool relayState = false;
 
 void setup() {
-  pinMode(RELAY_PIN, OUTPUT);
   Serial.begin(115200);
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);  // Asegúrate de que el relay esté apagado al inicio
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -37,16 +38,22 @@ void loop() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  String message = String((char*)payload).substring(0, length);
-  StaticJsonDocument<200> doc;
-  DeserializationError error = deserializeJson(doc, message);
-  
-  if (!error) {
-    if (doc.containsKey("command") && doc["command"] == "setState") {
-      relayState = doc["value"].as<bool>();
-      digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
-      sendState();
-    }
+  // Procesar el mensaje recibido
+  String message;
+  for (int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  if (message == "ON") {
+    digitalWrite(relayPin, HIGH);  // Encender el relay
+    Serial.println("Relay encendido");
+    relayState = true;
+    sendState();
+  } else if (message == "OFF") {
+    digitalWrite(relayPin, LOW);  // Apagar el relay
+    Serial.println("Relay apagado");
+    relayState = false;
+    sendState();
   }
 }
 
@@ -55,9 +62,9 @@ void reconnect() {
     Serial.print("Conectando a MQTT...");
     String clientId = "ESP32_RELAY_" + String(random(0xffff), HEX);
     
-    if (client.connect(clientId.c_str())) {
+    if (client.connect(clientId.c_str(), "santiago", "sosamejia")) {  // Agregar credenciales
       Serial.println("conectado");
-      client.subscribe(("iot/device/" + deviceId + "/command").c_str());
+      client.subscribe(("iot/device/" + deviceId + "/command").c_str());  // Suscribirse al topic de comandos
     } else {
       Serial.print("falló, rc=");
       Serial.print(client.state());
@@ -69,7 +76,7 @@ void reconnect() {
 
 void sendState() {
   StaticJsonDocument<200> doc;
-  doc["name"] = "Relé Luz";
+  doc["name"] = "Relay Luz";
   doc["type"] = "relay";
   doc["category"] = "Control";
   JsonObject data = doc.createNestedObject("data");
@@ -81,5 +88,5 @@ void sendState() {
 
   String message;
   serializeJson(doc, message);
-  client.publish(("iot/device/" + deviceId + "/state").c_str(), message.c_str());
+  client.publish(("iot/device/" + deviceId + "/state").c_str(), message.c_str(), true);
 }

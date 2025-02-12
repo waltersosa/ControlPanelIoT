@@ -44,7 +44,7 @@ export const useMQTT = () => {
         console.log('Conectado al broker MQTT');
         setIsConnected(true);
         
-        // Suscribirse al topic con QoS 1 para asegurar la entrega
+        // Suscribirse a todos los estados de dispositivos
         mqttClient?.subscribe('iot/device/+/state', { qos: 1 }, (err) => {
           if (err) {
             console.error('Error al suscribirse:', err);

@@ -4,11 +4,11 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-const char* ssid = "YourWiFiSSID";
-const char* password = "YourWiFiPassword";
-const char* mqtt_server = "broker.hivemq.com";
+const char* ssid = "HOLA";  // Cambia esto por el SSID de tu red WiFi
+const char* password = "12345678";  // Cambia esto por la contraseña de tu red WiFi
+const char* mqtt_server = "192.168.10.122";  // Cambiado a la IP del broker
 const int mqtt_port = 1883;
-const int DHT_PIN = 4;
+const int DHT_PIN = 12;
 
 DHT dht(DHT_PIN, DHT22);
 WiFiClient espClient;
@@ -52,7 +52,7 @@ void reconnect() {
     Serial.print("Conectando a MQTT...");
     String clientId = "ESP32_DHT_" + String(random(0xffff), HEX);
     
-    if (client.connect(clientId.c_str())) {
+    if (client.connect(clientId.c_str(), "santiago", "sosamejia")) {  // Agregar credenciales
       Serial.println("conectado");
     } else {
       Serial.print("falló, rc=");

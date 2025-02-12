@@ -44,6 +44,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             {device.name}
           </h3>
           <p className="text-sm text-gray-400">{device.type.toUpperCase()}</p>
+          <p className="text-sm text-gray-400">IP Address: {device.data.ipAddress}</p>
         </div>
         <motion.div
           animate={{

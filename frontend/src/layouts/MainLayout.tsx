@@ -40,7 +40,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-400">Broker MQTT:</span>
-                <span className="text-lg font-mono text-red-500">broker.hivemq.com:8000</span>
+                <span className="text-lg font-mono text-red-500">192.168.10.122</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
