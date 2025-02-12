@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5001/api
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5000"
+    environment:
+      - MONGODB_URI=mongodb://root:sosamejia@mongodb:27017/iot_db?authSource=admin
+      - PORT=5000
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=sosamejia
+      - MONGO_INITDB_DATABASE=iot_db
+    volumes:
+      - mongodb_data:/data/db
+    command: ["mongod", "--quiet"]
+
+volumes:
+  mongodb_data: 
