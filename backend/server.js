@@ -5,124 +5,63 @@ import cors from 'cors';
 import { MQTTClient } from './mqttClient.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { getLocalIp } from './utils/getLocalIp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Crear Express app
+// Create Express app with CORS configuration
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 
-// Crear servidor HTTP
+// Middleware for parsing JSON and handling CORS preflight
+app.use(express.json());
+app.options('*', cors());
+
+// API endpoint for getting local IP with error handling
+app.get('/api/local-ip', (req, res) => {
+  try {
+    const ip = getLocalIp();
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ ip, success: true });
+  } catch (error) {
+    console.error('Error getting local IP:', error);
+    res.status(500).json({ 
+      error: 'Failed to get local IP', 
+      success: false 
+    });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    status: 'ok',
+    connectedDevices: wss.clients ? wss.clients.size : 0,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Create HTTP server
 const server = createServer(app);
 
 // WebSocket server
 const wss = new WebSocketServer({ server });
 
-// Obtener la URL del broker MQTT desde las variables de entorno
-const mqttBrokerUrl = process.env.MQTT_BROKER || 'mqtt://localhost:1883'; // Valor por defecto
+// Get MQTT broker URL from environment variables
+const mqttBrokerUrl = process.env.MQTT_BROKER || 'mqtt://localhost:1883';
 
-// Cliente MQTT para el servidor
-const serverMqtt = new MQTTClient('webserver', mqttBrokerUrl); // Asegúrate de que tu cliente MQTT acepte la URL
+// MQTT client for the server
+const serverMqtt = new MQTTClient('webserver', mqttBrokerUrl);
 serverMqtt.connect();
 
-// Almacenar estado de dispositivos
-const deviceStates = new Map();
-
-// Suscribirse a todos los estados de dispositivos
-serverMqtt.subscribe('iot/device/+/state');
-
-// Manejar mensajes MQTT
-serverMqtt.on('message', (topic, message) => {
-  const deviceId = topic.split('/')[2];
-  deviceStates.set(deviceId, {
-    ...message,
-    lastSeen: Date.now()
-  });
-  broadcastDeviceStatus();
-});
-
-// Manejar conexiones WebSocket
-wss.on('connection', (ws) => {
-  console.log('Nueva conexión WebSocket');
-
-  // Enviar estado actual
-  broadcastDeviceStatus();
-
-  ws.on('message', (data) => {
-    try {
-      const message = JSON.parse(data);
-      
-      if (message.type === 'command') {
-        serverMqtt.publish(
-          `iot/device/${message.deviceId}/command`,
-          {
-            command: message.command,
-            value: message.value
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Error procesando mensaje:', error);
-    }
-  });
-});
-
-// Broadcast del estado de dispositivos
-function broadcastDeviceStatus() {
-  const status = Array.from(deviceStates.entries()).map(([id, state]) => ({
-    id,
-    type: state.type,
-    lastSeen: state.lastSeen,
-    data: state.data
-  }));
-
-  const message = JSON.stringify({
-    type: 'status',
-    devices: status
-  });
-
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocketServer.OPEN) {
-      client.send(message);
-    }
-  });
-}
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    connectedDevices: deviceStates.size,
-    uptime: process.uptime()
-  });
-});
-
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || 'localhost';
-
-server.listen(PORT, HOST, () => {
-  console.log(`Servidor ejecutándose en http://${HOST}:${PORT}`);
-});
-
-// Limpieza de dispositivos inactivos
-setInterval(() => {
-  const now = Date.now();
-  for (const [deviceId, state] of deviceStates.entries()) {
-    if (now - state.lastSeen > 30000) { // 30 segundos
-      deviceStates.delete(deviceId);
-      broadcastDeviceStatus();
-    }
-  }
-}, 10000);
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM recibido: cerrando servidor HTTP');
-  server.close(() => {
-    console.log('Servidor HTTP cerrado');
-    serverMqtt.disconnect();
-    process.exit(0);
-  });
+// Start server
+const port = process.env.PORT || 5174;
+server.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`Local IP: ${getLocalIp()}`);
 });

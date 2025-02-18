@@ -3,8 +3,7 @@ import mqtt from 'mqtt-browser';
 import { Device } from '../types/device';
 import { config } from '../config';
 
-const MQTT_BROKER = config.mqttBroker;
-const MQTT_OPTIONS = {
+const getMqttOptions = () => ({
   keepalive: 60,
   protocolId: 'MQTT',
   protocolVersion: 4,
@@ -21,7 +20,7 @@ const MQTT_OPTIONS = {
   clientId: `mqttjs_${Math.random().toString(16).substring(2, 10)}_${Date.now()}`,
   username: 'santiago',
   password: 'sosamejia'
-};
+});
 
 export const useMQTT = () => {
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
@@ -47,8 +46,11 @@ export const useMQTT = () => {
     let mqttClient: mqtt.MqttClient | null = null;
 
     const connect = () => {
-      console.log('Intentando conectar al broker:', MQTT_BROKER);
-      mqttClient = mqtt.connect(MQTT_BROKER, MQTT_OPTIONS);
+      const brokerUrl = config.mqttBroker;
+      const options = getMqttOptions();
+      
+      console.log('Intentando conectar al broker:', brokerUrl);
+      mqttClient = mqtt.connect(brokerUrl, options);
 
       mqttClient.on('connect', () => {
         console.log('Conectado al broker MQTT');
@@ -168,4 +170,4 @@ export const useMQTT = () => {
     toggleRelay,
     setServoAngle
   };
-}; 
+};

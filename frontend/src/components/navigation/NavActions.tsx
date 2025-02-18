@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Terminal, BarChart3 } from 'lucide-react';
-import { ServerMetrics } from '../metrics/ServerMetrics';
 import { ThemeToggle } from '../theme/ThemeToggle';
 
 interface NavActionsProps {
@@ -26,7 +25,6 @@ export const NavActions: React.FC<NavActionsProps> = ({ onToggleTerminal }) => {
       >
         <BarChart3 className="w-5 h-5 text-blue-400" />
       </motion.button>
-      <ServerMetrics />
       <ThemeToggle />
     </div>
   );

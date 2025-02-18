@@ -1,15 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Server, BookOpen, Terminal } from 'lucide-react';
+import { Server, BookOpen, Terminal, Wifi } from 'lucide-react';
 import { QuickStats } from './QuickStats';
 import { NavActions } from './NavActions';
 import { Link } from './Link';
 
 interface NavbarProps {
   onToggleTerminal: () => void;
+  brokerIp: string;
+  isConnected: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onToggleTerminal }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onToggleTerminal, brokerIp, isConnected }) => {
   return (
     <nav className="relative bg-black/40 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,6 +38,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleTerminal }) => {
                 <Terminal className="w-4 h-4 mr-2" />
                 Terminal IDE
               </Link>
+            </div>
+            <div className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-800/50">
+              <Wifi className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-red-500'}`} />
+              <span className="text-sm font-medium">
+                MQTT Broker: {brokerIp}
+              </span>
             </div>
             <QuickStats />
           </div>
