@@ -24,9 +24,16 @@ app.options('*', cors());
 // API endpoint for getting local IP with error handling
 app.get('/api/local-ip', (req, res) => {
   try {
-    const ip = getLocalIp();
+    const forwardedHost = req.headers['x-forwarded-host'];
+    const rawHostHeader = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.headers.host;
+    const primaryHost = rawHostHeader ? rawHostHeader.split(',')[0].trim() : undefined;
+    const hostWithoutPort = primaryHost ? primaryHost.split(':')[0] : undefined;
+    const resolvedHost = hostWithoutPort && hostWithoutPort !== 'localhost'
+      ? hostWithoutPort
+      : getLocalIp();
+
     res.setHeader('Content-Type', 'application/json');
-    res.json({ ip, success: true });
+    res.json({ ip: resolvedHost, success: true });
   } catch (error) {
     console.error('Error getting local IP:', error);
     res.status(500).json({ 

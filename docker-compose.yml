@@ -12,6 +12,12 @@ services:
     environment:
       - EMQX_NAME=emqx
       - EMQX_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - iot_network
 
@@ -22,7 +28,8 @@ services:
     container_name: iot_backend
     restart: unless-stopped
     depends_on:
-      - emqx
+      emqx:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - PORT=5174
@@ -40,8 +47,10 @@ services:
     container_name: iot_frontend
     restart: unless-stopped
     depends_on:
-      - backend
-      - emqx
+      backend:
+        condition: service_started
+      emqx:
+        condition: service_healthy
     ports:
       - "5173:80"
     networks:

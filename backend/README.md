@@ -85,7 +85,7 @@ El backend ahora se conecta a un broker MQTT real (por defecto EMQX en la misma 
 En el directorio raíz del proyecto hay un `docker-compose.yml` que levanta EMQX, el backend y el frontend en contenedores.
 
 ```bash
-docker compose up --build
+docker-compose up --build
 ```
 
 Servicios expuestos en la máquina host:
