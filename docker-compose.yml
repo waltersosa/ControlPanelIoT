@@ -1,58 +1,13 @@
 version: '3.8'
 
 services:
-  frontend:
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: iot_frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_MQTT_BROKER=ws://broker.hivemq.com:8000/mqtt
-    networks:
-      - iot_network
-    depends_on:
-      - backend
-
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: iot_backend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - MYSQL_HOST=mysql
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=sosamejia
-      - MYSQL_DATABASE=iot_db
-      - MQTT_BROKER=mqtt://santiago:sosamejia@192.168.1.5:1883
-    networks:
-      - iot_network
-
-  mysql:
-    image: mysql:latest
-    container_name: iot_mysql
-    ports:
-      - "3306:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=sosamejia
-      - MYSQL_DATABASE=iot_db
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - iot_network
-
   emqx:
     image: emqx/emqx:latest
     container_name: iot_emqx
+    restart: unless-stopped
     ports:
       - "1883:1883"
-      - "8883:8883"
       - "8083:8083"
-      - "8084:8084"
       - "18083:18083"
     environment:
       - EMQX_NAME=emqx
@@ -60,10 +15,38 @@ services:
     networks:
       - iot_network
 
-volumes:
-  mysql_data:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iot_backend
+    restart: unless-stopped
+    depends_on:
+      - emqx
+    environment:
+      - NODE_ENV=production
+      - PORT=5174
+      - PUBLIC_HOST=localhost
+      - MQTT_BROKER=mqtt://emqx:1883
+    ports:
+      - "5174:5174"
+    networks:
+      - iot_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: iot_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - emqx
+    ports:
+      - "5173:80"
+    networks:
+      - iot_network
 
 networks:
   iot_network:
-    name: iot_network
-    driver: bridge 
+    driver: bridge

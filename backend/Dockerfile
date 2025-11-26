@@ -1,7 +1,11 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --production
 COPY . .
-EXPOSE 3000
-CMD ["npm", "start"] 
+
+# Asegura que el servidor escuche en el puerto esperado
+ENV PORT=5174
+EXPOSE 5174
+
+CMD ["npm", "start"]

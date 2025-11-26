@@ -57,6 +57,21 @@ const mqttBrokerUrl = process.env.MQTT_BROKER || 'mqtt://localhost:1883';
 
 // MQTT client for the server
 const serverMqtt = new MQTTClient('webserver', mqttBrokerUrl);
+
+serverMqtt
+  .on('connect', () => {
+    console.log(`Conectado al broker MQTT en ${mqttBrokerUrl}`);
+  })
+  .on('reconnect', () => {
+    console.log('Intentando reconectar al broker MQTT...');
+  })
+  .on('disconnect', () => {
+    console.warn('Desconectado del broker MQTT');
+  })
+  .on('error', (error) => {
+    console.error('Error en la conexión MQTT:', error?.message || error);
+  });
+
 serverMqtt.connect();
 
 // Start server

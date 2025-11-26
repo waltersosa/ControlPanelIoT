@@ -3,12 +3,14 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
-# Copiar archivos de configuración
+# Copiar archivos de configuración y dependencias
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY tsconfig.app.json ./
 COPY tsconfig.node.json ./
 COPY vite.config.ts ./
+COPY postcss.config.js ./
+COPY tailwind.config.js ./
 
 # Instalar dependencias
 RUN npm install
@@ -21,16 +23,13 @@ COPY index.html ./
 # Construir la aplicación
 RUN npm run build
 
-# Etapa de producción
-FROM node:20-alpine
+# Etapa de producción: servir con Nginx
+FROM nginx:alpine
 
-WORKDIR /app
+# Copiar artefactos estáticos
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copiar archivos construidos
-COPY --from=build /app/dist /app
+EXPOSE 80
 
-# Exponer puerto
-EXPOSE 5173
-
-# Comando para iniciar el servidor
-CMD ["npx", "vite", "preview", "--host", "0.0.0.0"]
+CMD ["nginx", "-g", "daemon off;"]

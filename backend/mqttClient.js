@@ -1,47 +1,100 @@
 import { EventEmitter } from 'events';
-import { broker } from './mqttBroker.js';
+import mqtt from 'mqtt';
 
 class MQTTClient extends EventEmitter {
-  constructor(clientId) {
+  constructor(clientId, brokerUrl, options = {}) {
     super();
     this.clientId = clientId;
+    this.brokerUrl = brokerUrl;
+    this.options = {
+      clientId: this.clientId,
+      clean: true,
+      reconnectPeriod: 1000,
+      ...options
+    };
+
+    this.client = null;
     this.connected = false;
-    this.subscriptions = new Set();
-    
-    // Registrar con el broker
-    broker.registerClient(this.clientId, this);
-    
-    // Escuchar mensajes del broker
-    broker.on('message', (targetClientId, topic, message) => {
-      if (targetClientId === this.clientId && this.subscriptions.has(topic)) {
-        this.emit('message', topic, message);
-      }
-    });
   }
 
   connect() {
-    this.connected = true;
-    this.emit('connect');
-    return this;
-  }
-
-  subscribe(topic) {
-    this.subscriptions.add(topic);
-    broker.subscribe(this.clientId, topic);
-    return this;
-  }
-
-  publish(topic, message) {
-    if (this.connected) {
-      broker.publish(topic, message, this.clientId);
+    if (this.client) {
+      return this;
     }
+
+    this.client = mqtt.connect(this.brokerUrl, this.options);
+
+    this.client.on('connect', () => {
+      this.connected = true;
+      this.emit('connect');
+    });
+
+    this.client.on('reconnect', () => {
+      this.emit('reconnect');
+    });
+
+    this.client.on('close', () => {
+      this.connected = false;
+      this.emit('disconnect');
+    });
+
+    this.client.on('error', (error) => {
+      this.emit('error', error);
+    });
+
+    this.client.on('message', (topic, message, packet) => {
+      const payload = Buffer.isBuffer(message) ? message.toString() : message;
+      this.emit('message', topic, payload, packet);
+    });
+
     return this;
   }
 
-  disconnect() {
-    this.connected = false;
-    broker.removeClient(this.clientId);
-    this.emit('disconnect');
+  subscribe(topic, options = {}) {
+    if (!this.client) {
+      throw new Error('MQTT client no está conectado');
+    }
+
+    this.client.subscribe(topic, options, (error, granted) => {
+      if (error) {
+        this.emit('error', error);
+        return;
+      }
+      this.emit('subscribed', granted);
+    });
+
+    return this;
+  }
+
+  publish(topic, message, options = {}) {
+    if (!this.client) {
+      throw new Error('MQTT client no está conectado');
+    }
+
+    const payload = typeof message === 'string' ? message : JSON.stringify(message);
+
+    this.client.publish(topic, payload, options, (error) => {
+      if (error) {
+        this.emit('error', error);
+      } else {
+        this.emit('published', topic, payload);
+      }
+    });
+
+    return this;
+  }
+
+  disconnect(force = false) {
+    if (!this.client) {
+      return;
+    }
+
+    this.client.end(force, {}, () => {
+      this.connected = false;
+      this.emit('disconnect');
+      this.client.removeAllListeners();
+      this.client = null;
+    });
   }
 }
 

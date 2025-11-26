@@ -1,8 +1,12 @@
 import { networkInterfaces } from 'os';
 
 export function getLocalIp() {
+  if (process.env.PUBLIC_HOST) {
+    return process.env.PUBLIC_HOST;
+  }
+
   const nets = networkInterfaces();
-  
+
   // Patrones comunes para interfaces WiFi
   const wifiPatterns = [
     /^wi-?fi/i,     // WiFi, Wi-fi
